@@ -6,16 +6,19 @@ import  urllib.parse as urlparse
 from urllib.parse import parse_qs
 
 from secrets import sp_client_id, sp_client_secret
-
+import concurrent.futures
 import artist_track_extract
 
+##to measure time overhead
 
+import time
+
+start_time = time.time()
 client_id = sp_client_id
 client_secret = sp_client_secret
 redirect_uri = 'https://www.spotify.com'
 scope = "playlist-modify-public user-read-email user-read-private playlist-modify-private"
-req = f'{client_id}:{client_secret}'
-encoded = base64.b64encode(req.encode())
+
 
 class sp :
     def __init__(self) :
@@ -37,9 +40,11 @@ class sp :
         parsed = urlparse.urlparse(authorization_response)
         authorization_code = parse_qs(parsed.query)['code'][0]
 
+        sp_client_credentials_str = f'{client_id}:{client_secret}'
+        encoded_sp_client_credentials = base64.b64encode(sp_client_credentials_str.encode())
         # to get auth token
         headers = {
-            'Authorization' : f'Basic {encoded.decode()}'
+            'Authorization' : f'Basic {encoded_sp_client_credentials.decode()}'
         }
         data = {
             'grant_type' : 'authorization_code',
@@ -63,13 +68,8 @@ class sp :
         self.user_id  = user_info['id']
 
     def search(self) :
-        
-        search_url = 'https://api.spotify.com/v1/search'
 
-        track_data_list = artist_track_extract.get_data(input('Enter youtube playlist url :'))
-        
-        for song_details in track_data_list :
-
+        def get_search_uri(song_details) :
             headers = {
                 'Authorization': f'Bearer {self.access_token}'
             }
@@ -87,9 +87,23 @@ class sp :
             try :
                 song_uri =  json_response['tracks']['items'][0]['uri']
                 print(f'Song found : {song_details["track_name"]}')
-                self.uri_list.append(song_uri)
+                # self.uri_list.append(song_uri)
+                return song_uri
             except IndexError :
                 print(f'Song {song_details["track_name"]} not found')
+        
+        search_url = 'https://api.spotify.com/v1/search'
+
+        track_data_list = artist_track_extract.get_data(input('Enter youtube playlist url :'))
+        
+        
+        with concurrent.futures.ThreadPoolExecutor() as executor :
+            song_uris_thread = executor.map(get_search_uri, track_data_list)
+
+            self.uri_list = [uri for uri in song_uris_thread if uri != None]
+
+
+            
         
     def create_playlist(self) :
         create_playlist_url = f'https://api.spotify.com/v1/users/{self.user_id}/playlists'
@@ -126,5 +140,4 @@ class sp :
 if __name__ == '__main__' :
 
     user = sp()
-
-
+    print(time.time() - start_time)
