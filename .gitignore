@@ -1,0 +1,11 @@
+test.py
+data.json
+__pycache__/
+non_functional/
+dl.json
+sp_data.json
+yt_dl.py
+secrets.py
+re_test.txt
+re_extract.py
+titles.txt
