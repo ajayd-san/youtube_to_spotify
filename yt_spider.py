@@ -12,13 +12,20 @@ import googleapiclient.errors
 import json
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
-playlist_id = 'PLcucUzinV_SpwO2TGb0k-p7KfD_XtQ82V'
 
-def main():
+def get_playlist_id(youtube_url) :
+    playlist_id = youtube_url.split('list=')[1]
+    return playlist_id
+
+def fetch_titles(youtube_url):
     # Disable OAuthlib's HTTPS verification when running locally.
     # *DO NOT* leave this option enabled in production.
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
+
+    playlist_id = get_playlist_id(youtube_url)
+
+    # os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+    
     api_service_name = "youtube"
     api_version = "v3"
 
@@ -69,6 +76,3 @@ def main():
 
 
        
-
-if __name__ == "__main__":
-    main()

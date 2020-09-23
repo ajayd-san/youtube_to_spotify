@@ -7,6 +7,8 @@ from urllib.parse import parse_qs
 
 from secrets import sp_client_id, sp_client_secret
 
+import artist_track_extract
+
 
 client_id = sp_client_id
 client_secret = sp_client_secret
@@ -17,9 +19,12 @@ encoded = base64.b64encode(req.encode())
 
 class sp :
     def __init__(self) :
+        self.uri_list = []
         self.get_token()
         self.get_id()
-        self.uri_list = []
+        self.create_playlist()
+        self.search()
+        self.add_items()
 
 
     def get_token(self) :
@@ -61,25 +66,30 @@ class sp :
         
         search_url = 'https://api.spotify.com/v1/search'
 
-        track_name = 'Good Thing'
-        artist_name = 'Zedd'
-
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        params = {
-            'q' : f'track:{track_name} artist:{artist_name}', 
-            'type' : 'track',
-            'limit' : 1,
-
-        }
-
-        search_response = requests.get(search_url, headers = headers, params = params)
-        search_response.raise_for_status()
+        track_data_list = artist_track_extract.get_data(input('Enter youtube playlist url :'))
         
-        json_response = search_response.json()
-        song_uri =  json_response['tracks']['items'][0]['uri']
-        self.uri_list.append(song_uri)
+        for song_details in track_data_list :
+
+            headers = {
+                'Authorization': f'Bearer {self.access_token}'
+            }
+            params = {
+                'q' : f"track:{song_details['track_name']} artist:{song_details['artist']}", 
+                'type' : 'track',
+                'limit' : 1,
+
+            }
+
+            search_response = requests.get(search_url, headers = headers, params = params)
+            search_response.raise_for_status()
+            
+            json_response = search_response.json()
+            try :
+                song_uri =  json_response['tracks']['items'][0]['uri']
+                print(f'Song found : {song_details["track_name"]}')
+                self.uri_list.append(song_uri)
+            except IndexError :
+                print(f'Song {song_details["track_name"]} not found')
         
     def create_playlist(self) :
         create_playlist_url = f'https://api.spotify.com/v1/users/{self.user_id}/playlists'
@@ -90,7 +100,7 @@ class sp :
         }
 
         data = json.dumps({
-            'name' : 'new playlist'
+            'name' : input('Enter name of your new playlist :')
         })
         response = requests.post(create_playlist_url, headers = headers, data = data)
         print(response)
@@ -98,7 +108,6 @@ class sp :
         print(self.playlist_id)
 
     def add_items(self) :
-        self.playlist_id = '16vaTXN96qRyLF7nahQ7RD'
 
         add_items_url = f'https://api.spotify.com/v1/playlists/{self.playlist_id}/tracks'
 
@@ -114,10 +123,8 @@ class sp :
         res = requests.post(add_items_url, headers = headers, data = json.dumps(data))
         print(res)
 
+if __name__ == '__main__' :
 
-user = sp()
-# user.create_playlist()
-user.search()
-user.add_items()
+    user = sp()
 
 
